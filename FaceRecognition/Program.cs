@@ -9,6 +9,7 @@ namespace FaceRecognitionApp
     {
         static void Main(string[] args)
         {
+
             string photosFolder = "D:\\Projects\\Visual Studio\\FaceRecognition\\FaceRecognition\\images";
 
             if (!Directory.Exists(photosFolder))

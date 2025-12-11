@@ -1,0 +1,690 @@
+﻿<div class="left-panel-container p-3">
+    <!-- Верхняя часть  -->
+    <div class="upload-section">
+        <!-- Секция 1: Drag & Drop -->
+        <div class="mb-4">
+            <h6><i class="fas fa-upload"></i> Загрузить файл</h6>
+            <label for="fileInput" class="drop-zone">
+                <i class="fas fa-cloud-upload-alt fa-lg text-muted mb-2"></i>
+                <p class="mb-0 small">Кликните или перетащите файл</p>
+            </label>
+            <input type="file" id="fileInput" accept="image/*" multiple hidden>
+        </div>
+
+        <!-- Секция 2: URL -->
+        <div class="mb-3">
+            <h6><i class="fas fa-link"></i> Введите адрес</h6>
+            <div class="input-group">
+                <input type="text" class="form-control url-input"
+                       placeholder="http://...">
+                <button class="btn btn-primary" type="button" onclick="addFromUrl()">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Галерея загруженных фото -->
+    <div class="gallery-section">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">
+                <i class="fas fa-images"></i> Загруженные фото
+                <span class="badge bg-secondary" id="photoCount">0</span>
+            </h6>
+            <button class="btn btn-sm btn-outline-danger" onclick="clearAllPhotos()">
+                    <i class="fas fa-trash"></i>
+                </button>
+        </div>
+
+        <div class="photo-gallery" id="photoGallery">
+            <!-- Фото будут добавляться сюда -->
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Контейнер левой панели */
+    .left-panel-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    /* Верхняя часть - фиксированная высота */
+    .upload-section {
+        flex-shrink: 0;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    /* Галерея - занимает всё оставшееся пространство */
+    .gallery-section {
+        flex: 1;
+        overflow-y: auto;
+        padding-top: 10px;
+        min-height: 0;
+    }
+
+    /* Зона перетаскивания */
+    .drop-zone {
+        border: 2px dashed #6c757d;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        background-color: #f8f9fa;
+        display: block;
+        padding: 30px 15px;
+        text-align: center;
+    }
+
+        .drop-zone:hover {
+            border-color: #0d6efd;
+            background-color: #e9f4ff;
+        }
+
+        .drop-zone.dragover {
+            border-color: #0d6efd;
+            background-color: #cfe2ff;
+            transform: scale(1.02);
+        }
+
+    /* Галерея фотографий */
+    .photo-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 12px;
+        padding-right: 10px;
+    }
+
+    /* Элемент фотографии */
+    .photo-item {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+        border: 1px solid #dee2e6;
+    }
+
+        .photo-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+    /* Миниатюра фотографии */
+    .photo-thumbnail {
+        position: relative;
+        width: 100%;
+        padding-top: 75%;
+        overflow: hidden;
+    }
+
+    .photo-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s;
+    }
+
+    .photo-item:hover .photo-img {
+        transform: scale(1.05);
+    }
+
+    /* Кнопка удаления */
+    .delete-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 24px;
+        height: 24px;
+        background: rgba(220, 53, 69, 0.9);
+        border: none;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .photo-item:hover .delete-btn {
+        opacity: 1;
+    }
+
+    .delete-btn:hover {
+        background: #dc3545;
+        transform: scale(1.1);
+    }
+
+    /* Информация о файле */
+    .photo-info {
+        padding: 8px;
+        background: white;
+    }
+
+    .photo-name {
+        display: block;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .photo-size {
+        color: #6c757d;
+        font-size: 11px;
+    }
+
+    /* Полоса прокрутки */
+    .gallery-section::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .gallery-section::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .gallery-section::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+
+        .gallery-section::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+    /* Заголовки */
+    h6 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .btn-outline-danger {
+        margin-right: 5px;
+    }
+
+    /* Статус синхронизации */
+    .sync-status {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: #28a745;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 1000;
+        display: none;
+    }
+</style>
+
+<div class="sync-status" id="syncStatus"></div>
+
+<script>
+    // Константа для localStorage
+    const STORAGE_KEY = 'uploadedPhotos';
+
+    // Массив для хранения загруженных фото
+    let uploadedPhotos = [];
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        loadFromStorage();
+        setupEventListeners();
+    });
+
+    // Настройка всех обработчиков событий
+    function setupEventListeners() {
+        const dropZone = document.querySelector('.drop-zone');
+        const fileInput = document.getElementById('fileInput');
+        const urlInput = document.querySelector('.url-input');
+
+        // Клик по label открывает диалог выбора файла
+        // dropZone.addEventListener('click', function() {
+        //     fileInput.click();
+        // });
+
+        // Обработка выбора файлов
+        fileInput.addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                Array.from(this.files).forEach(file => {
+                    if (file.type.startsWith('image/')) {
+                        addPhotoFromFile(file);
+                    }
+                });
+                this.value = ''; // Сбрасываем input
+            }
+        });
+
+        // Drag & Drop события
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, function() {
+                dropZone.classList.add('dragover');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, function() {
+                dropZone.classList.remove('dragover');
+            });
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            const files = e.dataTransfer.files;
+
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    addPhotoFromFile(file);
+                }
+            });
+        });
+
+        // Enter в поле URL
+        urlInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addFromUrl();
+            }
+        });
+    }
+
+    // Вспомогательные функции для drag & drop
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Загрузка из localStorage
+    function loadFromStorage() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                uploadedPhotos = JSON.parse(saved);
+                uploadedPhotos.forEach(photo => {
+                    renderPhoto(photo);
+                });
+                updatePhotoCount();
+            } catch (error) {
+                console.error('Ошибка загрузки из localStorage:', error);
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        }
+    }
+
+    // Сохранение в localStorage
+    function saveToStorage() {
+        const toSave = uploadedPhotos.slice(0, 50);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    }
+
+    // Добавление фото из файла
+    function addPhotoFromFile(file) {
+        // ПРОВЕРКА ТИПА ФАЙЛА
+        if (!file.type.startsWith('image/')) {
+            alert('Можно загружать только изображения!');
+            return;
+        }
+
+        // Дополнительная проверка расширения{ "*.jpg", "*.jpeg", "*.png", "*.bmp" }
+        const allowedExtensions = ['.jpg', '.jpeg', '.png', '.bmp'];
+        const fileExtension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+
+        if (!allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext))) {
+            alert('Недопустимый формат файла. Разрешены: JPG, PNG, BMP');
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const photo = {
+                id: Date.now() + Math.random(),
+                name: file.name,
+                size: file.size,
+                displaySize: formatFileSize(file.size),
+                url: e.target.result, // Data URL
+                date: new Date().toLocaleTimeString(),
+                type: 'file'
+            };
+
+            uploadedPhotos.push(photo);
+            renderPhoto(photo);
+            updatePhotoCount();
+            saveToStorage();
+            showStatus('Фото добавлено: ' + file.name, 'success');
+        };
+
+        reader.onerror = function() {
+            showStatus('Ошибка чтения файла', 'error');
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    // Добавление фото из URL
+    function addFromUrl() {
+        const urlInput = document.querySelector('.url-input');
+        const url = urlInput.value.trim();
+
+        if (!url) {
+            showStatus('Введите URL', 'warning');
+            return;
+        }
+
+        // Проверяем, что это URL
+        if (!url.startsWith('http')) {
+            showStatus('Введите корректный URL (начинается с http:// или https://)', 'warning');
+            return;
+        }
+
+        // Показываем временную карточку
+        const tempPhoto = {
+            id: Date.now() + Math.random(),
+            name: url.split('/').pop() || 'image.jpg',
+            size: 0,
+            displaySize: 'Загрузка...',
+            url: 'https://via.placeholder.com/150x100/ffc107/000000?text=Loading',
+            date: 'Загружается...',
+            type: 'url',
+            originalUrl: url
+        };
+
+        uploadedPhotos.push(tempPhoto);
+        renderPhoto(tempPhoto);
+        updatePhotoCount();
+        saveToStorage();
+
+        // Пытаемся загрузить изображение
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        img.onload = function() {
+            // Обновляем фото с реальным URL
+            const photoIndex = uploadedPhotos.findIndex(p => p.id === tempPhoto.id);
+            if (photoIndex !== -1) {
+                uploadedPhotos[photoIndex].url = url;
+                uploadedPhotos[photoIndex].displaySize = 'Загружено';
+                uploadedPhotos[photoIndex].date = new Date().toLocaleTimeString();
+
+                // Обновляем DOM
+                const photoElement = document.querySelector(`[data-id="${tempPhoto.id}"]`);
+                if (photoElement) {
+                    const imgEl = photoElement.querySelector('.photo-img');
+                    const sizeEl = photoElement.querySelector('.photo-size');
+                    if (imgEl) imgEl.src = url;
+                    if (sizeEl) sizeEl.textContent = 'Загружено';
+                }
+
+                saveToStorage();
+                showStatus('Фото загружено по URL', 'success');
+            }
+        };
+
+        img.onerror = function() {
+            // В случае ошибки оставляем placeholder
+            const photoIndex = uploadedPhotos.findIndex(p => p.id === tempPhoto.id);
+            if (photoIndex !== -1) {
+                uploadedPhotos[photoIndex].displaySize = 'Ошибка';
+                uploadedPhotos[photoIndex].url = 'https://via.placeholder.com/150x100/dc3545/ffffff?text=Error';
+
+                const photoElement = document.querySelector(`[data-id="${tempPhoto.id}"]`);
+                if (photoElement) {
+                    const sizeEl = photoElement.querySelector('.photo-size');
+                    if (sizeEl) sizeEl.textContent = 'Ошибка загрузки';
+                }
+
+                saveToStorage();
+                showStatus('Ошибка загрузки по URL', 'error');
+            }
+        };
+
+        img.src = url;
+        urlInput.value = '';
+    }
+
+    // Отрисовка одного фото
+    function renderPhoto(photo) {
+        const gallery = document.getElementById('photoGallery');
+
+        const photoElement = document.createElement('div');
+        photoElement.className = 'photo-item';
+        photoElement.dataset.id = photo.id;
+
+        photoElement.innerHTML = `
+            <div class="photo-thumbnail">
+                <img src="${photo.url}"
+                     alt="${photo.name}"
+                     class="photo-img"
+                     onerror="this.src='https://via.placeholder.com/150x100/dc3545/ffffff?text=Error'">
+                <button class="delete-btn" onclick="deletePhoto(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="photo-info">
+                <small class="photo-name" title="${photo.name}">${photo.name}</small>
+                <small class="photo-size">${photo.displaySize || photo.size}</small>
+            </div>
+        `;
+
+        gallery.appendChild(photoElement);
+    }
+
+    // Удаление фото
+    function deletePhoto(button) {
+        
+        const photoItem = button.closest('.photo-item');
+        const photoId = photoItem.dataset.id;
+
+        // Удаляем из массива
+        uploadedPhotos = uploadedPhotos.filter(p => p.id != photoId);
+
+        // Удаляем из DOM
+        photoItem.remove();
+        updatePhotoCount();
+        saveToStorage();
+        showStatus('Фото удалено', 'info');
+    }
+
+    // Очистка всех фото
+    function clearAllPhotos() {
+        if (!confirm('Удалить все фотографии?')) return;
+
+        uploadedPhotos = [];
+        document.getElementById('photoGallery').innerHTML = '';
+        updatePhotoCount();
+        localStorage.removeItem(STORAGE_KEY);
+        showStatus('Все фото удалены', 'info');
+    }
+
+    // Обновление счетчика
+    function updatePhotoCount() {
+        const count = uploadedPhotos.length;
+        document.getElementById('photoCount').textContent = count;
+    }
+
+    // Форматирование размера файла
+    function formatFileSize(bytes) {
+        if (!bytes || bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // ==================== СИНХРОНИЗАЦИЯ С ПАПКОЙ ====================
+
+    // Синхронизация экрана с папкой Uploads
+    async function syncToFolder() {
+        try {
+            // Показываем статус
+            showStatus('Начинаем синхронизацию...', 'info');
+
+            // 1. Очищаем папку
+            showStatus('Очищаем старые...', 'info');
+            await clearUploadsFolder();
+
+            // 2. Сохраняем каждое фото
+            let savedCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < uploadedPhotos.length; i++) {
+                const photo = uploadedPhotos[i];
+                showStatus(`Синхронизировано ${i + 1} из ${uploadedPhotos.length}...`, 'info');
+
+                const saved = await savePhotoToUploads(photo);
+                if (saved) {
+                    savedCount++;
+                } else {
+                    errorCount++;
+                }
+            }
+
+            // 3. Показываем результат
+            if (errorCount === 0) {
+                showStatus(`✅ Успешно синхронизировано ${savedCount} фото`, 'success', 5000);
+            } else {
+                showStatus(`⚠️ Синхронизировано ${savedCount} из ${uploadedPhotos.length} фото (ошибок: ${errorCount})`, 'warning', 5000);
+            }
+
+        } catch (error) {
+            showStatus('❌ Ошибка синхронизации: ' + error.message, 'error', 5000);
+            console.error('Sync error:', error);
+        }
+    }
+
+    // Очистка папки Uploads на сервере
+    async function clearUploadsFolder() {
+        try {
+            const response = await fetch('/api/sync/clear', {
+                method: 'POST'
+            });
+
+            if (!response.ok) {
+                throw new Error('Ошибка очистки папки');
+            }
+
+            return true;
+        } catch (error) {
+            throw new Error('Не удалось очистить папку: ' + error.message);
+        }
+    }
+
+    // Сохранение одного фото в папку Uploads
+    async function savePhotoToUploads(photo) {
+        try {
+            if (photo.url.startsWith('data:')) {
+                // Data URL фото
+                return await saveDataUrlPhoto(photo);
+            } else if (photo.url.startsWith('http')) {
+                // URL фото
+                return await saveUrlPhoto(photo);
+            }
+            return false;
+        } catch (error) {
+            console.error('Ошибка синхронизации фото:', photo.name, error);
+            return false;
+        }
+    }
+
+    // Сохранение Data URL фото
+    async function saveDataUrlPhoto(photo) {
+        try {
+            // Конвертируем Data URL в Blob
+            const response = await fetch(photo.url);
+            const blob = await response.blob();
+
+            // Создаем FormData
+            const formData = new FormData();
+            formData.append('file', blob, photo.name);
+            formData.append('isDataUrl', 'true');
+
+            // Отправляем на сервер
+            const result = await fetch('/api/sync/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            return result.ok;
+        } catch (error) {
+            console.error('Ошибка синхронизации Data URL фото:', error);
+            return false;
+        }
+    }
+
+    // Сохранение фото по URL
+    async function saveUrlPhoto(photo) {
+        try {
+            // Проверяем и добавляем расширение если нужно
+            let fileName = photo.name;
+
+            if (!fileName.includes('.') || fileName.startsWith('.')) {
+                // Добавляем .png если нет расширения
+                fileName += '.png';
+            }
+
+            const response = await fetch('/api/sync/uploadUrl', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url: photo.url,
+                    fileName: fileName // Используем исправленное имя
+                })
+            });
+
+            return response.ok;
+        } catch (error) {
+            console.error('Ошибка синхронизации URL фото:', error);
+            return false;
+        }
+    }
+
+    // Проверка содержимого папки (для отладки)
+    async function checkUploadsFolder() {
+        try {
+            const response = await fetch('/api/sync/files');
+            const files = await response.json();
+
+            let message = `В папке Uploads/ ${files.length} файлов:\n\n`;
+            files.forEach(file => {
+                message += `📄 ${file.name} (${formatFileSize(file.size)})\n`;
+            });
+
+            alert(message);
+        } catch (error) {
+            alert('Ошибка проверки папки: ' + error.message);
+        }
+    }
+
+    // Показать статус
+    function showStatus(message, type = 'info', duration = 3000) {
+        const statusEl = document.getElementById('syncStatus');
+        statusEl.textContent = message;
+        statusEl.style.display = 'block';
+
+        // Цвет в зависимости от типа
+        const colors = {
+            success: '#28a745',
+            error: '#dc3545',
+            warning: '#ffc107',
+            info: '#17a2b8'
+        };
+        statusEl.style.backgroundColor = colors[type] || colors.info;
+
+        // Скрыть через duration
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, duration);
+    }
+</script>

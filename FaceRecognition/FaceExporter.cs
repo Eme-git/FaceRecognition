@@ -1,5 +1,4 @@
-﻿using FaceRecognitionApp;
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Drawing; 
@@ -80,7 +79,7 @@ namespace FaceRecognitionApp
 
             for (int i = 0; i < clusters.Count; ++i)
             {
-                string outputPath = Path.Combine(outputFolder, $"Person_{i}");
+                string outputPath = Path.Combine(outputFolder, $"Person {i + 1}");
                 Directory.CreateDirectory(outputPath);
 
                 foreach (var face in clusters[i].Faces)

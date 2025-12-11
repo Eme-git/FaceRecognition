@@ -1,0 +1,321 @@
+﻿<div class="right-panel-container">
+    <!-- Кнопка запуска FaceApplication -->
+    <div class="control-section p-3 border-bottom">
+        <h5><i class="fas fa-play-circle"></i> Запуск обработки</h5>
+        <div class="mb-3">
+            <button class="btn btn-success w-100" id="runFaceRecognitionBtn" onclick="runFaceRecognition()">
+                <i class="fas fa-play"></i> Запустить распознавание лиц
+            </button>
+        </div>
+    </div>
+
+    <!-- Визуализация результатов -->
+    <div class="visualization-section">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+            <h5 class="mb-0">
+                <i class="fas fa-images"></i> Результаты распознавания
+            </h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="refreshVisualization()">
+                <i class="fas fa-sync-alt"></i> Обновить
+            </button>
+        </div>
+
+        <div class="visualization-container" id="visualizationContainer">
+            <!-- Результаты будут отображаться здесь -->
+            <div class="text-center text-muted p-5">
+                <i class="fas fa-images fa-3x mb-3"></i>
+                <p>Результаты появятся здесь после запуска обработки</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .right-panel-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .control-section {
+        flex-shrink: 0;
+    }
+
+    .visualization-section {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    /* Контейнер для визуализации */
+    .visualization-container {
+        padding: 15px;
+    }
+
+    /* Группа (Person 1, Person 2 и т.д.) */
+    .person-group {
+        margin-bottom: 25px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white;
+    }
+
+    .person-group-header {
+        background: #f8f9fa;
+        padding: 10px 15px;
+        border-bottom: 1px solid #e9ecef;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    /* Линия фотографий */
+    .person-photos {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 15px;
+        min-height: 150px;
+    }
+
+    /* Отдельная фотография */
+    .person-photo {
+        width: 150px;
+        height: 150px;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+        border: 2px solid transparent;
+    }
+
+    .person-photo:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        border-color: #0d6efd;
+    }
+
+    .person-photo-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Статус загрузки */
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        z-index: 9999;
+        display: none;
+    }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #0d6efd;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+    }
+
+    /* Полоса прокрутки */
+    .visualization-section::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .visualization-section::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .visualization-section::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+</style>
+
+<!-- Overlay для загрузки -->
+<div class="loading-overlay" id="loadingOverlay">
+</div>
+
+<script>
+    // Запуск распознавания лиц
+    async function runFaceRecognition() {
+        // Проверяем, есть ли фото в Uploads
+        await syncToFolder()
+        const hasPhotos = await checkUploadsFolder();
+        if (!hasPhotos) {
+            hideLoading();
+            alert('Панель Загруженные фото пуста. Сначала загрузите фотографии.');
+            return;
+        }
+
+        // Отключаем кнопку на время обработки
+        const btn = document.getElementById('runFaceRecognitionBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обработка...';
+        btn.disabled = true;
+
+        try {
+            // Вызываем метод на сервере
+            const response = await fetch('/api/face/run', {
+                method: 'POST',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                await loadVisualization();
+
+                setTimeout(() => {
+                    hideLoading();
+                    alert(`✅ Обработка завершена!\nНайдено лиц: ${result.personsCount}\nФотографий: ${result.photosCount}`);
+                }, 1000);
+            } else {
+                hideLoading();
+                alert('❌ Ошибка: ' + result.message);
+            }
+
+        } catch (error) {
+            hideLoading();
+            alert('❌ Ошибка: ' + error.message);
+            console.error('Run error:', error);
+        } finally {
+            // Восстанавливаем кнопку
+            btn.innerHTML = '<i class="fas fa-play"></i> Запустить распознавание лиц';
+            btn.disabled = false;
+
+            btn.setAttribute('onclick', 'runFaceRecognition()');
+        }
+    }
+
+    // Проверка папки Uploads
+    async function checkUploadsFolder() {
+        try {
+            const response = await fetch('/api/face/check-uploads');
+            const result = await response.json();
+            return result.hasFiles;
+        } catch {
+            return false;
+        }
+    }
+
+    // Загрузка визуализации
+    async function loadVisualization() {
+        try {
+            const response = await fetch('/api/face/visualization');
+            const persons = await response.json();
+
+            const container = document.getElementById('visualizationContainer');
+            container.innerHTML = '';
+
+            if (persons.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted p-5">
+                        <i class="fas fa-user-slash fa-3x mb-3"></i>
+                        <p>Нет результатов</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Сортируем по имени папки (Person 1, Person 2...)
+            persons.sort((a, b) => {
+                const numA = parseInt(a.folderName.replace('Person ', '')) || 1;
+                const numB = parseInt(b.folderName.replace('Person ', '')) || 1;
+                return numA - numB;
+            });
+
+            // Создаем группы для каждого человека
+            persons.forEach(person => {
+                const group = document.createElement('div');
+                group.className = 'person-group';
+
+                group.innerHTML = `
+                    <div class="person-group-header">
+                        Человек ${parseInt(person.folderName.replace('Person ', '')) || 1}
+                        <span class="badge bg-secondary float-end">${person.photosCount} фото</span>
+                    </div>
+                    <div class="person-photos" id="photos_${person.folderName}">
+                        <!-- Фото будут добавлены динамически -->
+                    </div>
+                `;
+
+                container.appendChild(group);
+
+                // Добавляем фото в группу
+                const photosContainer = document.getElementById(`photos_${person.folderName}`);
+                person.photos.forEach(photo => {
+                    const photoElement = document.createElement('div');
+                    photoElement.className = 'person-photo';
+                    photoElement.innerHTML = `
+                        <img src="${photo.url}" alt="" class="person-photo-img"
+                             onerror="this.src='https://via.placeholder.com/150x150/6c757d/ffffff?text=Error'">
+                    `;
+                    photosContainer.appendChild(photoElement);
+                });
+            });
+
+        } catch (error) {
+            console.error('Ошибка загрузки визуализации:', error);
+            const container = document.getElementById('visualizationContainer');
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Ошибка загрузки результатов: ${error.message}
+                </div>
+            `;
+        }
+    }
+
+    // Обновить визуализацию
+    async function refreshVisualization() {
+        await loadVisualization();
+    }
+
+    // Показать/скрыть overlay загрузки
+    function showLoading(text, isSuccess = false) {
+        const overlay = document.getElementById('loadingOverlay');
+
+        overlay.style.display = 'flex';
+
+        if (isSuccess) {
+            overlay.innerHTML = `
+                <div style="font-size: 50px; color: #28a745; margin-bottom: 20px;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h5>Успешно!</h5>
+                <p>${text}</p>
+            `;
+        } else {
+            overlay.innerHTML = `
+                <i class="fas fa-spinner fa-spin fa-4x"></i>
+                <h5>Обработка фотографий...</h5>
+                <p>${text}</p>
+            `;
+        }
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    // При загрузке страницы проверяем визуализацию
+    document.addEventListener('DOMContentLoaded', function() {
+        loadVisualization();
+    });
+</script>

@@ -2,7 +2,7 @@
 {
     public class FaceCluster
     {
-        private static GraphFaceClustering _clusterizer = new GraphFaceClustering();
+        private static TwoStageFaceClustering _clusterizer = new TwoStageFaceClustering();
 
         public List<FaceInfo> Faces { get; set; }
 
